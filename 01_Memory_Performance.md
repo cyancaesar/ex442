@@ -333,3 +333,40 @@ Solutions for memory issues:
 - Consider the use of huge pages
 - Tune disk and/or network
 
+## Valgrind
+
+Valgrind is a known tool for identifying a memory leak within an application.
+
+```sh
+dnf install -y valgrind
+```
+
+Valgrind tools:
+
+```bash
+valgrind --help
+```
+
+```result
+usage: valgrind [options] prog-and-args
+
+  tool-selection option, with default in [ ]:
+    --tool=<name>             use the Valgrind tool named <name> [memcheck]
+                              available tools are:
+                              memcheck cachegrind callgrind helgrind drd
+                              massif dhat lackey none exp-bbv
+```
+
+Cachegrind:
+
+```bash
+valgrind --tool=cachegrind ls
+```
+
+It outputs how much cache hit did the command do.
+
+```bash
+# To know the CPU cache size
+dmidecode | grep L1
+```
+
