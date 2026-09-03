@@ -54,6 +54,7 @@ systemctl start stress2
 ```
 
 After viewing the top command you can see the first dd process takes ~60% of CPU cycles, and the second one takes ~30% CPU cycles. If we ran in the shell this long-running command:
+
 ```bash
 while true; do true; done
 ```
