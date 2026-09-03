@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "b34955c9e9a8ae71",
+        "id": "3f708d1978a99196",
         "type": "tabs",
         "children": [
           {
-            "id": "309ffa8ee5402d53",
+            "id": "674f3ceb399795be",
             "type": "leaf",
             "state": {
               "type": "empty",
@@ -184,14 +184,19 @@
       "bases:Create new base": false
     }
   },
-  "active": "c768b671370761d8",
+  "active": "674f3ceb399795be",
   "lastOpenFiles": [
-    "02_Network_Performance.md",
+    "07_cpu_performance.md",
+    "03_kernel_tuning.md",
+    "_note_1.md",
+    "04_control_groups.md",
+    "_note_2.md",
+    "02_linux_performance_monitoring.md",
+    "01_linux_performance_fundamentals.md",
+    "06_network_performance.md",
+    "05_memory_performance.md",
+    "00_index.md",
     "04_Revision.md",
-    "03_CPU_Performance.md",
-    "01_Memory_Performance.md",
-    "01_Note.md",
-    "02_Note.md",
     "Attachments/top_cpu_weights.png",
     "Attachments/sar.png",
     "Attachments/linux_observability_tools.png",

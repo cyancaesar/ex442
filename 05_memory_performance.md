@@ -1,295 +1,4 @@
-# Analyzing and Tuning I/O Perf.
-
-Basic indicators of bad I/O:
-- High `wa` parameter in top
-	- `wa` is waiting for I/O
-- High usage in iotop
-- Slow writes
-	- Simple tests using `dd`
-	- Complex tests using `fio`
-
-Doing stress copy on an a disk:
-
-```sh
-dd if=/dev/sda of=/dev/null bs=1M iflag=direct &
-dd if=/dev/sda of=/dev/null bs=1M iflag=direct &
-dd if=/dev/sda of=/dev/null bs=1M iflag=direct &
-```
-
-```
-top - 18:46:46 up 19:31,  3 users,  load average: 0.71, 0.20, 0.53
-Tasks: 368 total,   4 running, 364 sleeping,   0 stopped,   0 zombie
-%Cpu(s):  0.1 us, 22.5 sy,  0.0 ni, 43.1 id, 18.8 wa, 14.3 hi,  1.2 si,  0.0 st
-MiB Mem :   3622.3 total,    675.1 free,   1409.8 used,   1818.7 buff/cache
-MiB Swap:   4008.0 total,   4007.7 free,      0.3 used.   2212.5 avail Mem
-
-    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
-  73371 root      20   0  222036   2980   1844 R  62.5   0.1   0:07.53 dd
-  73370 root      20   0  222036   2984   1852 R  61.5   0.1   0:08.10 dd
-  73369 root      20   0  222036   2984   1852 R  57.5   0.1   0:08.65 dd
-```
-
-You can spot the `wa` is `18.8%`
-
-Running another writing command:
-
-```sh
-dd if=/dev/zero of=/giga.bin bs=1G count=10
-```
-
-```
-Total DISK READ :       0.00 B/s | Total DISK WRITE :    1783.31 M/s
-Actual DISK READ:       0.00 B/s | Actual DISK WRITE:    1769.06 M/s
-    TID  PRIO  USER     DISK READ DISK WRITE>    COMMAND
-  73444 be/4 root        0.00 B/s 1783.31 M/s dd if=/dev/zero of=/vbf bs=1G count=10
-      1 be/4 root        0.00 B/s    0.00 B/s systemd rhgb --switched-root --system --deserialize 31
-```
-
-iotop reports that disks write are ~1800Mb/s.
-
-Another utility for I/O observation is `iostat`:
-
-```sh
-iostat 2 5
-```
-
-```
-Linux 5.14.0-611.5.1.el9_7.x86_64 (sysperf.lab)         08/17/2026      _x86_64_        (6 CPU)
-avg-cpu:  %user   %nice %system %iowait  %steal   %idle
-           0.00    0.00   37.14    0.08    0.00   62.77
-
-Device             tps    kB_read/s    kB_wrtn/s    kB_dscd/s    kB_read    kB_wrtn    kB_dscd
-dm-0            900.50         0.00   1854978.00         0.00          0    3709956          0
-dm-1              0.00         0.00         0.00         0.00          0          0          0
-sda            2215.50         0.00   1855234.00         0.00          0    3710468          0
-sr0               0.00         0.00         0.00         0.00          0          0          0
-sr1               0.00         0.00         0.00         0.00          0          0          0
-
-avg-cpu:  %user   %nice %system %iowait  %steal   %idle
-           0.08    0.00    0.08    0.00    0.00   99.83
-
-Device             tps    kB_read/s    kB_wrtn/s    kB_dscd/s    kB_read    kB_wrtn    kB_dscd
-dm-0              0.50         2.00         0.00         0.00          4          0          0
-dm-1              0.00         0.00         0.00         0.00          0          0          0
-sda               0.50         2.00         0.00         0.00          4          0          0
-sr0               0.00         0.00         0.00         0.00          0          0          0
-sr1               0.00         0.00         0.00         0.00          0          0          0
-```
-
-## I/O Schedulers
-
-I/O schedulers optimizes for read requests or write requests. New multi-queue schedulers have been introduced to allow I/O operations to be mapped to multiple hardware or software request queues.
-- mq-deadline: requests are sorted by expiration time to ensure that operations are executed before expiration
-- kyber: specific to support fast throughput on SSD, where read requests are handled synchronous, and write requests are asynchronous.
-- bfq: recommended on slower I/O devices, and where interactive system response is a high priority. Don't use if throughput is a priority
-- none: use on a very fast I/O devices (NVMe) to not optimize anything
-
-View write buffers kernel parameters, called *dirty*:
-
-```sh
-ls /proc/sys/vm/dirty*
-# dirty_background_bytes
-# dirty_background_ratio
-# dirty_bytes
-# dirty_expire_centisecs
-# dirty_ratio
-# dirtytime_expire_seconds
-# dirty_writeback_centisecs
-```
-
-The dirty parameters are expressed in centisecs, 1 centisecs is 0.01 seconds. Important parameters are `dirty_expire_centisecs` and `dirty_writeback_centisecs`.
-- `dirty_expire_centisecs`: used to define when dirty data is old enough to be eligible for writeout by the kernel flusher threads.
-	- Data which has been dirty in-memory for longer than this interval will be written out next time a flusher thread wakes up.
-- `dirty_writeback_centisecs`: The kernel flusher threads will periodically wake up and write old data out to disk.
-
-```sh
-cat dirty_expire_centisecs
-# 3000
-# means 30 seconds in total
-
-cat dirty_writeback_centisecs
-# 1500
-# means 15 seconds in total
-```
-
-When a data is written to disk, it is first written in a buffer, and kept written into the buffer, so it gets written in disk in the most efficient way.
-
-First the data will wait in the buffer until the dirty cache to expire:
-- Cache is in a memory
-- Memory is organized in pages
-- By default, page size is 4Kb.
-
-So these pages are flagged as dirty, and when these pages haven't yet committed to disk, after 15 seconds, it is written.
-
-View buffer information:
-
-```sh
-egrep -i "buffers|writeback|dirty" /proc/meminfo
-```
-
-Check the active scheduler:
-
-```sh
-cat /sys/block/sda/queue/scheduler
-# none [mq-deadline] kyber bfq
-
-echo bfq > /sys/block/sda/queue/scheduler
-# none mq-deadline kyber [bfq]
-```
-
-For testing I/O performance, different behavior should be tested:
-- sequential reads
-- random reads
-- writing small files
-- writing large files
-
-Testing with `fio`:
-```sh
-fio --name=test1 --ioengine=libaio --iodepth=1 --rw=randwrite --bs=4k --direct=1 --size=512M --numjobs=2 --group-reporting --filename=/tmp/testfile
-```
-
-- Monitor `clat (used)`: lower is better
-- `--direct=1`: bypass writing to memory page cache
-
-```sh
-curl cht.sh/fio
-```
-
-Fixing bad I/O performance, you must look at these options:
-- Architecture: separate disk devices and SAN storage
-- File System choice
-	- XFS, Ext4, Btrfs, ZFS, (ReiserFS -> dark end) .. and ZFS
-- File System Journaling options
-- I/O Scheduler choice
-
-Ext4 and other Ext-family file system, have an option for mounting called `data=` which could be either:
-- `ordered` (default): journals only the metadata, forces data blocks to be written to disk before metadata is committed to the journal
-- `writeback`: journals only the metadata, data blocks are written to disk independently of metadata updates
-- `journal`: full journaling mode, both file and metadata are written to the journal before being placed into the permanent block
-
-Journal is a transaction log where Copy on Write (CoW) writes the data to a new data block and updates pointers atomically without overwriting the old data.
-
-```sh
-[root@sysperf ~]# time dd if=/dev/zero of=/bigfile bs=1M count=10240
-10240+0 records in
-10240+0 records out
-10737418240 bytes (11 GB, 10 GiB) copied, 4.90766 s, 2.2 GB/s
-
-real    0m4.909s
-user    0m0.002s
-sys     0m4.790s
-```
-
-the `real` time is the clock time, and in a multi-tasking system, it is unreliable, because it includes the time of the process that has pre-emptively moved from CPU (context switching).
-
-- Prepare a new virtual disk and partition it into two partitions and format both as Ext4, XFS.
-- Use the simple I/O test using dd: `dd if=/dev/zero of=<output> bs=1M count=10240`
-- Use `iotop` for monitoring the tests 
-- Use different I/O scheduler options through sysfs and view any improvement?
-- Use different journaling options for Ext4 and view any improvement?
-
-Creating one 20GB NVMe virtual disk:
-
-```sh
-fdisk /dev/nvme0n1
-# partition it into two 5GB paritions
-lsblk
-```
-
-```
-nvme0n1       259:0    0    20G  0 disk
-├─nvme0n1p1   259:1    0     5G  0 part
-└─nvme0n1p2   259:2    0     5G  0 part
-```
-
-Format `nvme0n1p1` to Ext4 filesystem and `nvme0n1p2` to XFS filesystem:
-
-```sh
-mkfs.ext4 /dev/nvme0n1p1
-mkfs.xfs /dev/nvme0n1p2
-```
-
-Create dedicated directory for each and mount them:
-
-```sh
-mkdir -p /mnt/ext4 /mntxfs
-mount -t ext4 -o data=ordered /dev/nvme0n1p1 /mnt/ext4 # data=ordered isn't needed since its the default option
-mount -t xfs /dev/nvme0n1p2 /mnt/xfs
-```
-
-Run `iotop` on a separate terminal and perform a simple `dd` test on Ext4 directory:
-
-```sh
-cat /sys/block/nvme0n1/queue/scheduler
-# [none] mq-deadline kyber bfq
-
-dd if=/dev/zero of=/mnt/ext4/test.bin bs=1M count=10240
-# Total DISK READ :       0.00 B/s | Total DISK WRITE :    1081.28 M/s
-# Actual DISK READ:       0.00 B/s | Actual DISK WRITE:    1118.21 M/s
-# 5138022400 bytes (5.1 GB, 4.8 GiB) copied, 4.56393 s, 1.1 GB/s
-
-umount /mnt/ext4
-mount -t ext4 -o data=writeback /dev/nvme0n1p1 /mnt/ext4
-dd if=/dev/zero of=/mnt/xfs/test.bin bs=1M count=4900
-# Total DISK READ :       0.00 B/s | Total DISK WRITE :    1061.02 M/s
-# Actual DISK READ:       0.00 B/s | Actual DISK WRITE:    1280.29 M/s
-# 5138022400 bytes (5.1 GB, 4.8 GiB) copied, 4.54832 s, 1.1 GB/s
-
-umount /mnt/ext4
-mount -t ext4 -o data=journal /dev/nvme0n1p1 /mnt/ext4
-dd if=/dev/zero of=/mnt/xfs/test.bin bs=1M count=4900
-# Total DISK READ :       0.00 B/s | Total DISK WRITE :     446.64 M/s
-# Actual DISK READ:       0.00 B/s | Actual DISK WRITE:     895.80 M/s
-# 5138022400 bytes (5.1 GB, 4.8 GiB) copied, 11.0868 s, 463 MB/s
-
-echo bfq > /sys/block/nvme0n1/queue/scheduler
-mount -t ext4 -o data=journal /dev/nvme0n1p1 /mnt/ext4
-dd if=/dev/zero of=/mnt/xfs/test.bin bs=1M count=4900
-# 5138022400 bytes (5.1 GB, 4.8 GiB) copied, 103.559 s, 49.6 MB/s
-# THIS TAKES MUCH MORE
-
-echo kyber > /sys/block/nvme0n1/queue/scheduler
-# BAD
-
-echo none > /sys/block/nvme0n1/queue/scheduler
-dd if=/dev/zero of=/mnt/xfs/test.bin bs=1M count=4900
-# Total DISK READ :       0.00 B/s | Total DISK WRITE :       0.00 B/s
-# Actual DISK READ:       0.00 B/s | Actual DISK WRITE:    1175.81 M/s
-# 5138022400 bytes (5.1 GB, 4.8 GiB) copied, 2.2857 s, 2.2 GB/s
-
-echo kyber > /sys/block/nvme0n1/queue/scheduler
-dd if=/dev/zero of=/mnt/xfs/test.bin bs=1M count=4900
-# Total DISK READ :       0.00 B/s | Total DISK WRITE :       2.06 G/s
-# Actual DISK READ:       0.00 B/s | Actual DISK WRITE:       2.02 G/s
-# 5138022400 bytes (5.1 GB, 4.8 GiB) copied, 2.282 s, 2.3 GB/s
-```
-
-
-> [!INFO] Test Review
-> This simple test shows XFS outperforms Ext4 filesystem by ~50%, with no I/O scheduler set and with I/O scheduler set to kyber.
-> 
-> While Ext4 with no I/O scheduler set does an equal performance of `ordered` and `writeback`. With `journal` data option it takes more than the double.
-> 
-> With Ext4 data option set to `journal` and an I/O scheduler, it takes a really long time.
-
-
-> [!IMPORTANT] TuneD and I/O Scheduler
-> Review on how to set a TuneD profile with a custom elevator parameter that specifies disk I/O scheduler.
-
-
-# tmpfs
-
-Temporary mount of `/tmp` on memory:
-
-```sh
-systemctl list-unit-files tmp*
-systemctl cat tmp.mount
-systemctl enable tmp.mount
-```
-
-Be careful of starting it now, it will wipe the `/tmp`.
-
-# Memory Performance Tuning
+## Memory Performance Tuning
 
 Things to know about memory:
 - Virtual vs. Resident Memory
@@ -376,7 +85,7 @@ Swap file and swap device:
 - Swap device is equal to a swap file
 - But swap device is better than a fragmented swap file (fragmentation happens at the file system level)
 
-#### Page Tables and TLB
+## Page Tables and TLB
 
 - CPU has Translation Look-aside Buffer which is a cache of address translation mapping from VIRT to RES.
 - Huge Tables can be used (default size of 2 GiB) to enhance the TLB address space.
@@ -417,7 +126,7 @@ free -m
 
 Because 100 huge pages times 2 MB (default size of HugePages) is 200, so it allocated 200 MB of memory.
 
-#### Memory Usage
+### Memory Usage
 
 - Page cache is used to store data being read from and written to disk
 - Buffers is the part of page cache that is used to store blocks of data directly read from a block device (without using an FS)
@@ -559,7 +268,7 @@ Mem:            3622         965        2589          10         298        2657
 Swap:          10151         956        9195
 ```
 
-#### Overcommitting Memory
+### Overcommitting Memory
 
 - The Linux kernel uses overcommitting to ensure each process can request the amount of virtual memory it needs
 - This is based on the principle that RAM requirements never match virtual memory requirements
@@ -579,7 +288,7 @@ sysctl -p /etc/sysctl.d/98-overcommit
 grep CommitLimit /proc/meminfo
 ```
 
-#### OOM
+### OOM
 
 - When out of memory, the kernel raises an OOM and a process is killed
 - `vm.panic_on_oom` raises kernel panic
@@ -623,4 +332,78 @@ Solutions for memory issues:
 - Use Cgroups
 - Consider the use of huge pages
 - Tune disk and/or network
+
+## NUMA
+
+**NUMA (Non-Uniform Memory Access)** is a memory architecture in which CPUs are grouped into NUMA nodes, with each node having memory that is physically closer to its CPUs. Accessing local memory is usually faster and has lower latency than accessing memory attached to another NUMA node.
+
+NUMA-aware resource placement can improve performance by keeping a process close to the memory it uses. The `numactl` command can be used to control CPU and memory placement for a process, while `numastat -p <PID>` shows NUMA-related memory usage for a specific process.
+
+NUMA information for a running process can also be inspected through:
+
+```bash
+/proc/<PID>/status
+/proc/<PID>/numa_maps
+```
+
+For services managed by systemd, CPU and NUMA placement can be configured persistently. CPU affinity can be viewed with:
+
+```bash
+systemctl show --property CPUAffinity sshd.service
+```
+
+and configured with:
+
+```bash
+systemctl set-property <service> CPUAffinity=<value>
+```
+
+NUMA policy can also be defined directly in a systemd unit:
+
+```ini
+[Service]
+NUMAPolicy=bind
+NUMAMask=0
+AllowedCPUs=0-15
+AllowedMemoryNodes=0
+```
+
+In practice, NUMA configuration can be inspected or controlled in three main ways: with `numactl`, through `/proc/<PID>`, or through systemd service settings.
+
+## Valgrind
+
+Valgrind is a known tool for identifying a memory leak within an application.
+
+```sh
+dnf install -y valgrind
+```
+
+Valgrind tools:
+
+```bash
+valgrind --help
+```
+
+```result
+usage: valgrind [options] prog-and-args
+
+  tool-selection option, with default in [ ]:
+    --tool=<name>             use the Valgrind tool named <name> [memcheck]
+                              available tools are:
+                              memcheck cachegrind callgrind helgrind drd
+                              massif dhat lackey none exp-bbv
+```
+
+Cachegrind:
+
+```bash
+valgrind --tool=cachegrind ls
+```
+
+It outputs how much cache hit did the command do.
+
+```bash
+# To know the CPU cache size
+dmidecode | grep L1
+```
 
