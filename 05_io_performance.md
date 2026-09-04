@@ -88,99 +88,230 @@ For serious benchmarking or workload simulation, `fio` is generally more useful 
 
 ## I/O Schedulers
 
-I/O schedulers optimizes for read requests or write requests. New multi-queue schedulers have been introduced to allow I/O operations to be mapped to multiple hardware or software request queues.
-- mq-deadline: requests are sorted by expiration time to ensure that operations are executed before expiration
-- kyber: specific to support fast throughput on SSD, where read requests are handled synchronous, and write requests are asynchronous.
-- bfq: recommended on slower I/O devices, and where interactive system response is a high priority. Don't use if throughput is a priority
-- none: use on a very fast I/O devices (NVMe) to not optimize anything
+I/O schedulers determine how block I/O requests are queued and dispatched to storage devices. Modern Linux systems use the multi-queue block layer, which allows requests to be distributed across multiple hardware or software queues.
 
-View write buffers kernel parameters, called *dirty*:
+Common schedulers include:
 
-```sh
+- `mq-deadline`: prioritizes requests using deadlines to prevent excessive waiting and provide predictable latency.
+- `kyber`: designed for fast storage devices and attempts to control latency by limiting the number of synchronous and asynchronous requests in flight.
+- `bfq`: focuses on fairness and interactive responsiveness. It is often useful on slower or shared devices where latency matters more than maximum throughput.
+- `none`: performs minimal software scheduling and is commonly suitable for devices such as NVMe drives that already perform their own internal scheduling.
+
+To view the scheduler available for a device:
+
+```bash
+cat /sys/block/sda/queue/scheduler
+```
+
+```result
+none [mq-deadline] kyber bfq
+```
+
+The scheduler enclosed in brackets is currently active.
+
+To change it temporarily:
+
+```bash
+echo bfq > /sys/block/sda/queue/scheduler
+```
+
+The change can be verified with:
+
+```bash
+cat /sys/block/sda/queue/scheduler
+```
+
+## Dirty Pages and Writeback
+
+Normal buffered writes are first placed into the Linux page cache rather than being written immediately to storage. Pages containing modified data that has not yet been written to the backing device are called **dirty pages**.
+
+Memory is organized into pages, commonly 4 KiB on x86-64 systems, although page size depends on the architecture and configuration.
+
+Kernel writeback behavior is controlled through parameters under:
+
+```bash
 ls /proc/sys/vm/dirty*
-# dirty_background_bytes
-# dirty_background_ratio
-# dirty_bytes
-# dirty_expire_centisecs
-# dirty_ratio
-# dirtytime_expire_seconds
-# dirty_writeback_centisecs
 ```
 
-The dirty parameters are expressed in centisecs, 1 centisecs is 0.01 seconds. Important parameters are `dirty_expire_centisecs` and `dirty_writeback_centisecs`.
-- `dirty_expire_centisecs`: used to define when dirty data is old enough to be eligible for writeout by the kernel flusher threads.
-	- Data which has been dirty in-memory for longer than this interval will be written out next time a flusher thread wakes up.
-- `dirty_writeback_centisecs`: The kernel flusher threads will periodically wake up and write old data out to disk.
+Common parameters include:
 
-```sh
-cat dirty_expire_centisecs
-# 3000
-# means 30 seconds in total
-
-cat dirty_writeback_centisecs
-# 1500
-# means 15 seconds in total
+```text
+dirty_background_bytes
+dirty_background_ratio
+dirty_bytes dirty_expire_centisecs
+dirty_ratio
+dirtytime_expire_seconds
+dirty_writeback_centisecs
 ```
 
-When a data is written to disk, it is first written in a buffer, and kept written into the buffer, so it gets written in disk in the most efficient way.
+Two important timing parameters are:
 
-First the data will wait in the buffer until the dirty cache to expire:
-- Cache is in a memory
-- Memory is organized in pages
-- By default, page size is 4Kb.
+- `vm.dirty_expire_centisecs`: determines how old dirty data must become before it is considered eligible for background writeback.
+- `vm.dirty_writeback_centisecs`: determines how frequently kernel writeback threads wake up to inspect dirty pages.
 
-So these pages are flagged as dirty, and when these pages haven't yet committed to disk, after 15 seconds, it is written.
+These values are expressed in **centiseconds**, where one centisecond equals `0.01` seconds.
 
-View buffer information:
+For example:
 
-```sh
+```bash
+cat /proc/sys/vm/dirty_expire_centisecs
+```
+
+```result
+3000
+```
+
+This represents $3000 \times 0.01=30 \ \text{seconds}$
+
+And:
+
+```bash
+cat /proc/sys/vm/dirty_writeback_centisecs
+```
+
+```result
+1500
+```
+
+This represents $1500 \times 0.01 = 15 \ \text{seconds}$
+
+A writeback interval of 15 seconds does **not** mean every dirty page is automatically written after 15 seconds. It means the kernel periodically wakes to inspect dirty pages, while `dirty_expire_centisecs` determines when dirty data becomes old enough for normal background writeback.
+
+Dirty-page information can be inspected with:
+
+```bash
 egrep -i "buffers|writeback|dirty" /proc/meminfo
 ```
 
-Check the active scheduler:
+## Testing I/O Performance
 
-```sh
-cat /sys/block/sda/queue/scheduler
-# none [mq-deadline] kyber bfq
+I/O performance should be tested using workloads that resemble the actual application behavior. Useful test patterns include:
 
-echo bfq > /sys/block/sda/queue/scheduler
-# none mq-deadline kyber [bfq]
-```
+- Sequential reads
+- Sequential writes
+- Random reads
+- Random writes
+- Small-block operations
+- Large-block operations
+- Mixed read/write workloads
+- Different queue depths and levels of concurrency
 
-For testing I/O performance, different behavior should be tested:
-- sequential reads
-- random reads
-- writing small files
-- writing large files
+### Testing with fio
 
-Testing with `fio`:
-```sh
-fio --name=test1 --ioengine=libaio --iodepth=1 --rw=randwrite --bs=4k --direct=1 --size=512M --numjobs=2 --group-reporting --filename=/tmp/testfile
-```
+`fio` provides much more control than `dd` and is better suited for realistic I/O benchmarking.
 
-- Monitor `clat (used)`: lower is better
-- `--direct=1`: bypass writing to memory page cache
+To view `fio` manual page:
 
-```sh
+```bash
 curl cht.sh/fio
 ```
 
-Fixing bad I/O performance, you must look at these options:
-- Architecture: separate disk devices and SAN storage
-- File System choice
-	- XFS, Ext4, Btrfs, ZFS, (ReiserFS -> dark end) .. and ZFS
-- File System Journaling options
-- I/O Scheduler choice
 
-Ext4 and other Ext-family file system, have an option for mounting called `data=` which could be either:
-- `ordered` (default): journals only the metadata, forces data blocks to be written to disk before metadata is committed to the journal
-- `writeback`: journals only the metadata, data blocks are written to disk independently of metadata updates
-- `journal`: full journaling mode, both file and metadata are written to the journal before being placed into the permanent block
+Example:
 
-Journal is a transaction log where Copy on Write (CoW) writes the data to a new data block and updates pointers atomically without overwriting the old data.
+```bash
+fio \
+	--name=test1 \
+	--ioengine=libaio \
+	--iodepth=1 \
+	--rw=randwrite \
+	--bs=4k \
+	--direct=1 \
+	--size=512M \
+	--numjobs=2 \
+	--group_reporting \
+	--filename=/tmp/testfile
+```
 
-```sh
-[root@sysperf ~]# time dd if=/dev/zero of=/bigfile bs=1M count=10240
+Important options include:
+
+- `--rw=randwrite`: performs random writes.
+- `--bs=4k`: uses a 4 KiB block size.
+- `--iodepth=1`: allows one outstanding I/O request per job.
+- `--numjobs=2`: runs two workers.
+- `--direct=1`: performs direct I/O and bypasses the normal page cache.
+- `--size=512M`: defines the test workload size.
+
+Useful output metrics include:
+
+- **IOPS**: number of I/O operations completed per second.
+- **Bandwidth**: amount of data transferred per second.
+- **Latency**: time required to complete an I/O request.
+- **Completion latency (`clat`**): time between submission of an I/O request and its completion.
+
+For latency measurements, lower values are generally better.
+## Improving I/O Performance
+
+Poor I/O performance can originate from several layers of the storage stack, so tuning should not focus only on the I/O scheduler.
+
+Areas to investigate include:
+
+- Storage architecture
+    - Separate heavily used workloads across different devices.
+    - Consider SAN, RAID, NVMe, or other storage architectures where appropriate.
+- Filesystem selection
+    - XFS
+    - Ext4
+    - Btrfs
+    - ReiserFS
+    - ZFS
+- Filesystem mount options
+- Journaling behavior
+- I/O scheduler selection
+- Application I/O patterns
+- Queue depth and concurrency
+- Memory and page-cache behavior
+
+The best filesystem or scheduler depends on the workload rather than there being one universally fastest option.
+
+## Filesystem Journaling
+
+Filesystems such as Ext4 use a journal to protect filesystem consistency after crashes.
+
+Ext4 supports several data journaling modes through the `data=` mount option.
+
+### ordered
+
+This is the normal default mode. Metadata is journaled, while file data is written to its normal filesystem location before the corresponding metadata transaction is committed.
+
+```result
+data=ordered
+```
+
+It provides a balance between performance and consistency.
+### writeback
+
+Only metadata is journaled, and there is no ordering guarantee that file data reaches disk before the corresponding metadata transaction is committed.
+
+```
+data=writeback
+```
+
+This may reduce some write-ordering overhead but provides weaker guarantees about file contents after a crash.
+
+### journal
+
+Both file data and metadata are first written to the journal before being written to their final filesystem locations.
+
+```
+data=journal
+```
+
+This provides stronger journaling behavior but usually introduces additional write overhead.
+
+A **journal** and **Copy-on-Write (CoW)** are different mechanisms. Journaling records changes in a transaction log so that filesystem operations can be recovered consistently after a crash. Copy-on-Write instead writes modified data or metadata to new locations before updating references to them. Filesystems such as Btrfs and ZFS rely heavily on CoW, while Ext4 primarily uses journaling.
+
+## Basic Testing with dd
+
+`dd` can be useful for simple throughput tests.
+
+Example:
+
+```bash
+time dd if=/dev/zero of=/bigfile bs=1M count=10240
+```
+
+```result
 10240+0 records in
 10240+0 records out
 10737418240 bytes (11 GB, 10 GiB) copied, 4.90766 s, 2.2 GB/s
@@ -190,7 +321,16 @@ user    0m0.002s
 sys     0m4.790s
 ```
 
-the `real` time is the clock time, and in a multi-tasking system, it is unreliable, because it includes the time of the process that has pre-emptively moved from CPU (context switching).
+The timing values mean:
+
+- `real`: total elapsed wall-clock time.
+- `user`: CPU time spent executing user-space code.
+- `sys`: CPU time spent executing kernel code on behalf of the process.
+
+`real` time is still meaningful because it tells you how long the operation took from the user's perspective. However, it includes time spent waiting for I/O, being descheduled, and competing with other workloads, so it should not be interpreted as pure CPU execution time.
+
+Another important consideration is caching. A normal `dd` write may complete partly through the page cache rather than representing sustained physical storage performance. For storage benchmarking, options such as direct I/O or `fio` are usually more appropriate.
+## Demo
 
 - Prepare a new virtual disk and partition it into two partitions and format both as Ext4, XFS.
 - Use the simple I/O test using dd: `dd if=/dev/zero of=<output> bs=1M count=10240`
