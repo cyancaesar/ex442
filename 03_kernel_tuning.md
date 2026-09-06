@@ -50,26 +50,15 @@ System-wide memory statistics are available in:
 Useful fields include:
 
 - `Active`
-    
 - `Inactive`
-    
 - `Active(anon)`
-    
 - `Inactive(anon)`
-    
 - `Active(file)`
-    
 - `Inactive(file)`
-    
 - `Dirty`
-    
 - `Buffers`
-    
 - `Cached`
-    
 - `VmallocTotal`
-    
-
 ### Magic SysRq
 
 `/proc/sysrq-trigger` is an administrative interface for sending **Magic SysRq** commands directly to the kernel. It is primarily intended for low-level troubleshooting and emergency recovery, such as inspecting blocked tasks, synchronizing filesystems, or triggering a crash for debugging.
