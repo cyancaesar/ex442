@@ -52,6 +52,44 @@ tcp_lat:
 
 It reports that the bandwidth is 632 MB/s.
 
+## iperf3
+
+A modern alternative to **qperf**, on the server:
+
+```bash
+iperf -s
+```
+
+On the client:
+
+```bash
+iperf -c slownix
+```
+
+```result
+-----------------------------------------------------------
+Server listening on 5201 (test #1)
+-----------------------------------------------------------
+Accepted connection from 192.168.70.129, port 45698
+[  5] local 192.168.70.128 port 5201 connected to 192.168.70.129 port 45712
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-1.00   sec   512 KBytes  4.19 Mbits/sec                  
+[  5]   1.00-2.00   sec   384 KBytes  3.15 Mbits/sec                  
+[  5]   2.00-3.00   sec   512 KBytes  4.19 Mbits/sec                  
+[  5]   3.00-4.00   sec   384 KBytes  3.14 Mbits/sec                  
+[  5]   4.00-5.00   sec   384 KBytes  3.15 Mbits/sec                  
+[  5]   5.00-6.00   sec   512 KBytes  4.20 Mbits/sec                  
+[  5]   6.00-7.00   sec   512 KBytes  4.19 Mbits/sec                  
+[  5]   7.00-8.00   sec   384 KBytes  3.15 Mbits/sec                  
+[  5]   8.00-9.00   sec   512 KBytes  4.20 Mbits/sec                  
+[  5]   9.00-10.00  sec   512 KBytes  4.19 Mbits/sec                  
+[  5]  10.00-10.11  sec  0.00 Bytes  0.00 bits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-10.11  sec  4.62 MBytes  3.84 Mbits/sec                  receiver
+-----------------------------------------------------------
+
+```
 ## netcat
 
 With netcat:
