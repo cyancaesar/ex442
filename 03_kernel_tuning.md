@@ -221,7 +221,7 @@ cat /usr/lib/tuned/network-throughput/tuned.conf
 Custom profiles can be created under:
 
 ```text
-/etc/tuned/<profile_name>/tuned.conf
+/etc/tuned/profiles/<profile_name>/tuned.conf
 ```
 
 and then activated with:

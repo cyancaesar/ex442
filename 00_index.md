@@ -11,10 +11,10 @@
 	- [ ] Use the eBPF family of tools (e.g. syscount, gethostlatency and others)  to diagnose system and application behavior
 	- [ ] Given multiple versions of applications that perform the same or similar tasks, choose which version of the application to run on a system based on its observed performance characteristics
 - [ ] Tune running systems
-	- [ ] Alter process priorities of both new and existing processes
-	- [ ] Select and configure tuned profiles
-	- [ ] Manage system resource usage using control groups
-	- [ ] Configure systemd services with resource constraints
+	- [x] Alter process priorities of both new and existing processes
+	- [x] Select and configure tuned profiles
+	- [x] Manage system resource usage using control groups
+	- [x] Configure systemd services with resource constraints
 - [ ] Tune memory utilization
 	- [ ] Configure systems to support alternate page sizes for applications that use large amounts of memory
 	- [ ] Configure memory overcommit behavior

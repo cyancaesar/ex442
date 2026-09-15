@@ -1,3 +1,113 @@
+## Page Tables and TLB
+
+Linux normally manages memory in 4 KiB pages on x86_64.
+
+A process uses virtual memory, while RAM is physical memory. The CPU needs a translation:
+
+$$
+\text{Virtual address} \rightarrow \text{Physical address}
+$$
+
+Those mapping are stored in **pages tables**.
+
+The **Translation Lookaside Buffer** (TLB) is a CPU cache for recently used virtual-to-physical address translations.
+
+Instead of walking page tables every time, the mapping used:
+
+$$
+\text{Virtual address} \rightarrow \text{TLB} \rightarrow \text{Physical address}
+$$
+
+If the mapping is not in the TLB:
+
+$$
+\text{Virtual address} \rightarrow \text{TLB-miss} \rightarrow \text{Page-table walk} \rightarrow \text{Physical address}
+$$
+
+## Huge Pages and HugeTLB
+
+Huge pages are larger memory pages used to reduce the number of page-table entries required for large amounts of memory. On x86_64, the normal page size is typically **4 KiB**, while common HugeTLB page size is **2 MiB**.
+
+Using larger pages means the CPU can cover more memory with each TLB entry, which can reduce TLB misses and page-table overhead.
+
+**HugeTLB** is the Linux mechanism used to explicitly reserve and manage huge pages.
+
+To check the configured huge-page size:
+
+```bash
+grep -i hugepagesize /proc/meminfo
+```
+
+```result
+Hugepagesize:       2048 kB
+```
+
+### Reserving HugeTLB pages
+
+Check the number of huge pages:
+
+```bash
+sysctl vm.nr_hugepages
+```
+
+```result
+vm.nr_hugepages = 0
+```
+
+Reserve 100 huge pages:
+
+```bash
+sysctl -w vm.nr_hugepages=100
+```
+
+If each page is 2 MiB:
+
+$$
+100 \times 2 \ \text{MiB} = 200 \ \text{MiB}
+$$
+Approximately 200 MiB of RAM is reserved for the HugeTLB pool.
+
+## HugeTLB and Transparent Huge Pages
+
+HugeTLB:
+- Explicitly configured
+- Reserved memory pool
+- Configured with `vm.nr_hugepages`
+
+Transparent Huge Pages (THP):
+- Automatically managed by the kernel
+- No manually reserved fixed pool required
+- Kernel tries to use huge pages when appropriate
+
+Check if THP is enabled:
+
+```bash
+cat /sys/kernel/mm/transparent_hugepage/enabled
+```
+
+```result
+[always] madvise never
+```
+
+To disable it (runtime):
+
+```bash
+echo never > /sys/kernel/mm/transparent_hugepage/enabled
+```
+
+Disabling it permanently by adding `transparent_hugepage=never` flag on GRUB:
+
+```bash
+vim /etc/default/grub
+```
+
+```result
+GRUB_CMDLINE_LINUX="... transparent_hugepage=never"
+```
+
+```bash
+grubby --update-kernel=ALL --args="transparent_hugepage=never"
+```
 ## Memory Performance Tuning
 
 Things to know about memory:
@@ -88,7 +198,7 @@ Swap file and swap device:
 ## Page Tables and TLB
 
 - CPU has Translation Look-aside Buffer which is a cache of address translation mapping from VIRT to RES.
-- Huge Tables can be used (default size of 2 GiB) to enhance the TLB address space.
+- Huge pages can be used, the default HugeTLB page size is 2 MiB on x86_64, to enhance the TLB address space.
 - On NUMA systems, the kernel spreads huge pages across all NUMA nodes
 
 View TLB size:
