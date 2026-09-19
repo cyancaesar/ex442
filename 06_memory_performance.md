@@ -24,6 +24,19 @@ $$
 \text{Virtual address} \rightarrow \text{TLB-miss} \rightarrow \text{Page-table walk} \rightarrow \text{Physical address}
 $$
 
+## Example
+
+Huge pages are a solution for memory pages problem. Imagine a 4GB file, with the default memory page with a size of 4KB, how many pages?
+
+$$
+\frac{4 \times 1024 \times 1024\space KB}{4\space KB} = 1,048,576 \space pages
+$$
+For HugePage of 2MB:
+
+$$
+\frac{4 \times 1024\space MB}{2}=2,048\space huge \space pages
+$$
+
 ## Huge Pages and HugeTLB
 
 Huge pages are larger memory pages used to reduce the number of page-table entries required for large amounts of memory. On x86_64, the normal page size is typically **4 KiB**, while common HugeTLB page size is **2 MiB**.
@@ -108,233 +121,294 @@ GRUB_CMDLINE_LINUX="... transparent_hugepage=never"
 ```bash
 grubby --update-kernel=ALL --args="transparent_hugepage=never"
 ```
-## Memory Performance Tuning
 
-Things to know about memory:
-- Virtual vs. Resident Memory
-- Swap vs. Cache
-- Huge pages
-- Memory overcommitting
+## HugeTLB on NUMA
 
-Huge pages are a solution for memory pages problem. Imagine a 4GB file, with the default memory page with a size of 4KB, how many pages?
+On NUMA systems, HugeTLB pages are allocated from specific NUMA nodes. The kernel may distribute them across eligible nodes, but allocation depends on the current memory policy and available contiguous memory.
 
-$$
-\frac{4 \times 1024 \times 1024\space KB}{4\space KB} = 1,048,576 \space pages
-$$
-For HugePage of 2MB:
+Check per-node huge pages:
 
-$$
-\frac{4 \times 1024\space MB}{2}=2,048\space huge \space pages
-$$
-
-HugePages introduces two types:
-- Transparent HugePages
-- HugePages (2MB memory pages)
-
-So what HugePages enhance is what it is called **Translation Lookaside Buffer** (TLB). It is a very fast cache inside the CPU that stores the mapping of `Virtual Address --> Physical Address`.
-It makes the CPU to look for an address in the TLB, if it doesn't exist (called TLB-miss), then the CPU would walk through all the page tables to figure it out.
-
-Memory overcommitting is related to virtual and resident memory, memory overcommitting means a process could ask for more memory allocation than what's available.
-
-Memory in Linux:
-- Linux addresses memory in pages, with a standard size on x86_64 of 4Kib, to confirm use `getconf -a | grep PAGE`
-- Processes do not address memory directly, each process gets a virtual address space
-- When process requests memory, the kernel maps that physical address of a page to a virtual address in the process address space (TLB)
-- It promotes isolation among processes, so each gets its own memory space
-- The total amount of virtual memory that can be addresses is determined by the CPU address sizes `/proc/cpuinfo`
-- The total amount of virtual memory is seen in `/proc/meminfo`
-
-```sh
-watch -n 1 cat /proc/meminfo # in pane 1
-dd if=/dev/zero of=/mnt/xfs/boot.bin bs=1M count=5120 # in pane 2
-
-# notice the *Dirty* and *Writeback* section
+```bash
+grep Huge /sys/devices/system/node/node*/meminfo
 ```
 
-The resident memory (RSS) is a pointer to the physical memory address.
+## Page Faults
 
-- VmallocTotal: the total amount of kernel virtual address space available for memory allocations made through the Linux `vmalloc` mechanism.
-- It is not physical RAM. It represents virtual address space the kernel can use to map memory that is virtually contiguous even if the underlying physical pages are scattered.
+Each process uses page tables to map virtual memory pages to physical memory pages.
 
-Page Faults:
-- Each process has a page table that tracks mappings of virtual pages to physical pages
-- When a process accesses a page that has not yet been mapped to a physical memory page, this is a **minor page fault**
-- A major page fault occurs when the memory page needs to be fetched from disk (swap)
+A **page fault** occurs when a process accesses a virtual page that does not currently have a usable mapping.
 
-To monitor page faults:
+There are two main types:
+- **Minor page fault**: the page can be resolved without reading data from storage.
+- **Major page fault**: resolving the page requires reading data from storage, such as swap or a file-backed mapping.
 
-```sh
+Monitor page faults for a process:
+
+```bash
 ps -o pid,minflt,majflt,comm -C firefox
+```
+
+Or measure them while running a command:
+
+```bash
 perf stat -e minor-faults,major-faults firefox
 ```
 
-The information is obtained from `/proc` directory, `/proc/<pid>/stats` fields: 10 and 12.
+The counters are also available from:
 
-```sh
-perf stat -e minor-faults,major-faults bash
-id
-ls
-systemctl start httpd
-systemctl stop httpd
-exit
+```bash
+/proc/<pid>/stat
 ```
 
-```
- Performance counter stats for 'bash':
+Where the field 10 is the minor faults and field 12 is the major faults [The /proc Filesystem]([https://docs.kernel.org/filesystems/proc.html](https://docs.kernel.org/filesystems/proc.html#process-specific-subdirectories)).
 
-            18,011      minor-faults
-                 3      major-faults
+## Swap
 
-      22.435913590 seconds time elapsed
+Swap provides additional virtual memory by allowing the kernel to move inactive anonymous memory pages from RAM to storage.
 
-       0.062857000 seconds user
-       0.096931000 seconds sys
-```
+Swap can either be configured as either:
+- a swap partition or device
+- a swap file
 
-Swap file and swap device:
-- Swap device is equal to a swap file
-- But swap device is better than a fragmented swap file (fragmentation happens at the file system level)
+Both are managed by the kernel as swap space.
 
-## Page Tables and TLB
+View active swap:
 
-- CPU has Translation Look-aside Buffer which is a cache of address translation mapping from VIRT to RES.
-- Huge pages can be used, the default HugeTLB page size is 2 MiB on x86_64, to enhance the TLB address space.
-- On NUMA systems, the kernel spreads huge pages across all NUMA nodes
-
-View TLB size:
-
-```sh
-cat /proc/cpuinfo | grep "TLB"
-# TLB size        : 2560 4K pages
+```bash
+swapon --show
+cat /proc/swaps
 ```
 
-HugePages:
+View memory and swap usage:
 
-```sh
-sysctl -a | grep huge
-echo 200 > /proc/sys/vm/nr_hugepages
-
-# Check the default HugePage size
-cat /proc/meminfo | grep "Huge"
+```bash
+free -h
 ```
 
-```sh
-sysctl -a | grep huge
-# vm.nr_hugepages = 0
+A swap device avoids filesystem-level fragmentation, while a swap file is generally easier to create, resize, and manage.
 
-free -m
-#               total        used        free      shared  buff/cache   available
-# Mem:            3622         878        *2689*           5         307        2744
-# Swap:          10151          99       10052
+Swap behavior is influenced by kernel tunables such as:
 
-echo 100 > /proc/sys/vm/nr_hugepages
-free -m
-#               total        used        free      shared  buff/cache   available
-# Mem:            3622        1078        *2489*           5         307        2544
-# Swap:          10151          99       10052
+```bash
+sysctl vm.swappiness
 ```
 
-Because 100 huge pages times 2 MB (default size of HugePages) is 200, so it allocated 200 MB of memory.
+This controls how aggressively the kernel prefers reclaiming anonymous memory through swap versus reclaiming filesystem cache.
 
-### Memory Usage
+## Memory Usage 
 
-- Page cache is used to store data being read from and written to disk
-- Buffers is the part of page cache that is used to store blocks of data directly read from a block device (without using an FS)
-- Anonymous memory are memory pages that processes allocate and use to store working data
+Linux divides memory usage into several categories, including anonymous memory, filesystem page cache, and kernel-managed buffers.
 
-```sh
+### Anonymous Memory
+
+Anonymous memory is memory allocated by processes that is not backed by a regular file.
+
+Examples: 
+- Process heap (`malloc()`) 
+- Process stack 
+- Anonymous `mmap()` allocations
+
+Anonymous pages must be preserved when reclaimed. The kernel can move them to swap if necessary.
+
+### Page Cache
+
+The page cache stores filesystem data in RAM to reduce repeated disk I/O.
+
+Normal file reads and writes use the page cache. Direct I/O, such as `O_DIRECT`, can bypass the page cache.
+
+Check page-cache usage:
+
+```bash
+grep -E '^(Cached|Buffers|Active\(file\)|Inactive\(file\))' /proc/meminfo
+```
+
+### Buffers vs Page Cache
+
+- **Buffers**: Kernel memory used for block-device-related buffers and metadata.
+- **Cached**: Primarily filesystem page cache, excluding `SwapCached`.
+
+`Buffers` and `Cached` are separate accounting categories in `/proc/meminfo`.
+
+### Active and Inactive Memory
+
+Linux tracks memory using active and inactive LRU lists to help determine which pages are suitable for reclaim.
+
+The main categories are:
+
+```text
+Active(anon)
+Inactive(anon)
+Active(file)
+Inactive(file)
+```
+
+- `Active(anon)`: Recently used anonymous memory.
+- `Inactive(anon)`: Less recently used anonymous memory.
+- `Active(file)`: Recently used file-backed memory.
+- `Inactive(file)`: Less recently used file-backed memory.
+
+Active and inactive describe reclaim tracking, not whether memory is currently being accessed.
+
+### Memory Reclaim
+
+When memory pressure occurs, the kernel can reclaim memory through different mechanisms:
+
+- Clean file-backed pages can be discarded and loaded again from their backing file.
+- Dirty file-backed pages may need writeback before reclaim.
+- Anonymous pages may be written to swap to preserve their contents.
+
+The kernel uses reclaim algorithms and memory pressure information to determine what to reclaim.
+
+## Swap and Swappiness
+
+View current swappiness:
+
+```bash
+sysctl vm.swappiness
+```
+
+The tunable controls the relative I/O cost of swapping anonymous memory versus filesystem paging.
+
+```text
+Lower value: Swapping is considered relatively expensive. The kernel favors retaining anonymous memory.
+
+Higher value: Swapping is considered relatively cheaper. The kernel may swap anonymous memory more readily.
+```
+
+The supported range is 0–200, and the default is commonly 60.
+
+The value does not directly specify how frequently pages are swapped.
+
+## Memory Monitoring
+
+Useful commands:
+
+```bash
+free -h
+vmstat 1
 cat /proc/meminfo
-
-# The Active is the sum of Anonymous Active memory and File Active memory
-# The Inactive is the sum of Anonymous Inactive memory and File Inactive memory
-# MemTotal - (Active + Inactive) doesn't give you MemFree, because there are other areas, in Kernel, where it reserves its memory. 
+sysctl vm.swappiness
+swapon --show
 ```
 
-About cache, swap, and paging:
-- Unused memory is for caching
-- Some applications need direct I/O to bypass cache
-- When using direct I/O, significant amounts of swap are needed to guarantee that contagious memory can be assigned
-- Recommended to use SSD devices for swapping
-- When under memory pressure, some applications reclaim page cache and/or move anonymous memory to swap
-	- `vm.swappiness` dictates the kernel how often to move to swap. High values `200` is moving to swap is preferred, lowers `0` means dropping page cache is preferred.
-- When a page from swap is needed, a major page fault is raised
+Monitor:
+- Available memory (`MemAvailable`)
+- Anonymous memory
+- Filesystem cache
+- Swap usage
+- Swap-in / swap-out activity
+- Memory pressure and reclaim behavior
 
-Dropping page cache:
+## Memory Lab
 
-```sh
-sync # flushes dirty filesystem data first
+
+Create a very large file:
+
+```bash
+dd if=/dev/zero of=/large.bin bs=1M count=5120 status=progress
+```
+
+Write any dirty pages to filesystem and flush the cache:
+
+```bash
+sync
 echo 1 > /proc/sys/vm/drop_caches
-
-# Consult the man page `man proc`
 ```
 
-Testing page cache:
+View the memory values first:
 
-```sh
-# Create a very big file
-dd if=/dev/zero of=/vbf bs=1M count=5120 status=progress
-
-# Flush the cache
-sync
-drop 1 > /proc/sys/vm/drop_caches
-
-# Check the values first
-grep -E "MemFree|MemAvailable|^Cached" /vbf
-# MemFree:         2620152 kB
-# MemAvailable:    2567580 kB
-# Cached:           100520 kB
-
-# Read the file
-cat /vbf > /dev/null
-
-# Double check
-grep -E "MemFree|MemAvailable|^Cached" /vbf
-# MemFree:          124064 kB
-# MemAvailable:    2573896 kB
-# Cached:          2635424 kB
-
-# Flush the cache
-sync
-drop 1 > /proc/sys/vm/drop_caches
-
-# Trible check
-grep -E "MemFree|MemAvailable|^Cached" /vbf
-# MemFree:         2745540 kB
-# MemAvailable:    2675876 kB
-# Cached:            64572 kB
+```bash
+grep -E "MemFree|MemAvailable|^Cached" /proc/meminfo
 ```
+
+```result
+MemFree:         2620152 kB
+MemAvailable:    2567580 kB
+Cached:           100520 kB
+```
+
+Perform a disk I/O:
+
+```bash
+cat /large.bin > /dev/null
+```
+
+View again the memory values:
+
+```bash
+grep -E "MemFree|MemAvailable|^Cached" /proc/meminfo
+```
+
+```result
+MemFree:          124064 kB
+MemAvailable:    2573896 kB
+Cached:          2635424 kB
+```
+
+Flush again and verify that the cache has been flushed:
+
+```bash
+sync
+echo 1 > /proc/sys/vm/drop_caches
+grep -E "MemFree|MemAvailable|^Cached" /proc/meminfo
+```
+
+```result
+MemFree:         2745540 kB
+MemAvailable:    2675876 kB
+Cached:            64572 kB
+```
+
 
 Another test to see how page cache accelerate frequent read:
 
-```sh
-# Flush the cache
+```bash
 sync
 drop 1 > /proc/sys/vm/drop_caches
-
 grep -E "MemFree|MemAvailable|^Cached" /proc/meminfo
-# MemFree:         2736812 kB
-# MemAvailable:    2666700 kB
-# Cached:            63656 kB
+```
 
-# Read the very big file to nothing
-perf stat dd if=/vbf of=/dev/null bs=1M count=5120 status=progress
-# 2.160154232 seconds time elapsed
+```result
+MemFree:         2736812 kB
+MemAvailable:    2666700 kB
+Cached:            63656 kB
+```
 
+Read the large file:
+
+```bash
+perf stat dd if=/large.bin of=/dev/null bs=1M count=5120 status=progress
+```
+
+```result
+2.160154232 seconds time elapsed
+```
+
+Verify the file is cached:
+
+```bash
 grep -E "MemFree|MemAvailable|^Cached" /proc/meminfo
-# MemFree:          154324 kB
-# MemAvailable:    2622764 kB
-# Cached:          2655044 kB
+```
 
-perf stat dd if=/vbf of=/dev/null bs=1M count=5120 status=progress
-# 1.543587703 seconds time elapsed
+```result
+MemFree:          154324 kB
+MemAvailable:    2622764 kB
+Cached:          2655044 kB
+```
+
+Read again and verify the time to read has been reduced:
+
+```bash
+perf stat dd if=/large.bin of=/dev/null bs=1M count=5120 status=progress
+```
+
+```result
+1.543587703 seconds time elapsed
 ```
 
 View swap usage:
 
 ```sh
-echo 2000 > /proc/sys/vm/nr_hugepages # allocate all available memory. to force new apps to use the swap
-free -m
-
 vmstat -w 2 50
 firefox &
 ```
@@ -365,19 +439,6 @@ It is not bad to see swap in and swap out, but it is often bad to see it quite a
 Mem:            3622        2809         445           0         130         812
 Swap:          10151         583        9568
 ```
-
-Free memory plus buffer cache is about ~500 MB, which is bad and red flag.
-
-```sh
-echo 0 > /proc/sys/vm/nr_hugepages
-```
-
-```
-               total        used        free      shared  buff/cache   available
-Mem:            3622         965        2589          10         298        2657
-Swap:          10151         956        9195
-```
-
 ### Overcommitting Memory
 
 - The Linux kernel uses overcommitting to ensure each process can request the amount of virtual memory it needs
@@ -398,12 +459,15 @@ sysctl -p /etc/sysctl.d/98-overcommit
 grep CommitLimit /proc/meminfo
 ```
 
+$$
+\text{CommitLimit} = (\text{RAM} - \text{HugeTLB RAM})\times \frac{overcommit\_ratio}{100}+Swap
+$$
 ### OOM
 
 - When out of memory, the kernel raises an OOM and a process is killed
 - `vm.panic_on_oom` raises kernel panic
 - Processes with a higher `/proc/<pid>/oom_score` are more likely to get killed
-- Tune `/proc/<pid>/oom_scire_adj`, 1000 is more likely, -1000 make a process immune from OOM killer
+- Tune `/proc/<pid>/oom_score_adj`, 1000 is more likely, -1000 make a process immune from OOM killer
 - `/proc/<pid>/oom_adj` is deprecated
 - Systemd can set this parameter:
 	- `[System] OOMAdjust=-18`
@@ -437,7 +501,7 @@ Indicators of memory issues:
 - Memory leaks: `valgrind`
 
 Solutions for memory issues:
-- Add more RAM :)
+- Add more RAM
 - Use swap *efficiently*
 - Use Cgroups
 - Consider the use of huge pages

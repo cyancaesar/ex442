@@ -24,13 +24,13 @@
             }
           },
           {
-            "id": "4b286088d8a2a9a7",
+            "id": "55767ec45ff8d6f4",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
                 "file": "06_memory_performance.md",
-                "mode": "preview",
+                "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
@@ -116,7 +116,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "02_Network_Performance.md",
+                "file": "06_memory_performance.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -205,11 +205,11 @@
       "bases:Create new base": false
     }
   },
-  "active": "4b286088d8a2a9a7",
+  "active": "55767ec45ff8d6f4",
   "lastOpenFiles": [
     "00_index.md",
-    "03_kernel_tuning.md",
     "06_memory_performance.md",
+    "03_kernel_tuning.md",
     "tunables/swappiness.md",
     "07_network_performance.md",
     "02_linux_performance_monitoring.md",

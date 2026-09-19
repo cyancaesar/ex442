@@ -10,15 +10,15 @@
 	- [ ] Configure systems to run SystemTap scripts
 	- [ ] Use the eBPF family of tools (e.g. syscount, gethostlatency and others)  to diagnose system and application behavior
 	- [ ] Given multiple versions of applications that perform the same or similar tasks, choose which version of the application to run on a system based on its observed performance characteristics
-- [ ] Tune running systems
+- [x] Tune running systems
 	- [x] Alter process priorities of both new and existing processes
 	- [x] Select and configure tuned profiles
 	- [x] Manage system resource usage using control groups
 	- [x] Configure systemd services with resource constraints
 - [ ] Tune memory utilization
-	- [ ] Configure systems to support alternate page sizes for applications that use large amounts of memory
-	- [ ] Configure memory overcommit behavior
-	- [ ] Tune swap algorithm behavior to prioritize retaining anonymous or cached data
+	- [x] Configure systems to support alternate page sizes for applications that use large amounts of memory
+	- [x] Configure memory overcommit behavior
+	- [x] Tune swap algorithm behavior to prioritize retaining anonymous or cached data
 	- [ ] Identify NUMA topology and configure NUMA-aware resource placement
 	- [ ] Configure SYSV shared memory limits
 - [ ] Configure disk and file subsystems
