@@ -4,18 +4,18 @@
     "type": "split",
     "children": [
       {
-        "id": "08b17f5045ff5d0b",
+        "id": "ed6b7516a71cfc1c",
         "type": "tabs",
         "children": [
           {
-            "id": "f5e6377216e465b5",
+            "id": "dadbf5ac0c19a2dc",
             "type": "leaf",
             "pinned": true,
             "state": {
               "type": "markdown",
               "state": {
                 "file": "00_index.md",
-                "mode": "preview",
+                "mode": "source",
                 "source": false
               },
               "pinned": true,
@@ -24,17 +24,17 @@
             }
           },
           {
-            "id": "55767ec45ff8d6f4",
+            "id": "a6dc0c1fdf59bb15",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "06_memory_performance.md",
-                "mode": "source",
+                "file": "sysv_ipc_shm.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "06_memory_performance"
+              "title": "sysv_ipc_shm"
             }
           }
         ],
@@ -116,7 +116,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "06_memory_performance.md",
+                "file": "00_index.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -205,25 +205,26 @@
       "bases:Create new base": false
     }
   },
-  "active": "55767ec45ff8d6f4",
+  "active": "a6dc0c1fdf59bb15",
   "lastOpenFiles": [
     "00_index.md",
-    "06_memory_performance.md",
-    "03_kernel_tuning.md",
+    "sysv_ipc_shm.md",
+    "attachments/linux_observability_tools.png",
+    "_note_1.md",
     "tunables/swappiness.md",
-    "07_network_performance.md",
+    "03_kernel_tuning.md",
     "02_linux_performance_monitoring.md",
     "01_linux_performance_fundamentals.md",
+    "07_network_performance.md",
+    "06_memory_performance.md",
     "_note_2.md",
     "tunables",
-    "_note_1.md",
     "05_io_performance.md",
     "04_control_groups.md",
     "08_cpu_performance.md",
     "04_Revision.md",
     "attachments/top_cpu_weights.png",
     "attachments/sar.png",
-    "attachments/linux_observability_tools.png",
     "attachments",
     "ddd.sh.md",
     "Welcome.md"

@@ -19,8 +19,8 @@
 	- [x] Configure systems to support alternate page sizes for applications that use large amounts of memory
 	- [x] Configure memory overcommit behavior
 	- [x] Tune swap algorithm behavior to prioritize retaining anonymous or cached data
-	- [ ] Identify NUMA topology and configure NUMA-aware resource placement
-	- [ ] Configure SYSV shared memory limits
+	- [x] Identify NUMA topology and configure NUMA-aware resource placement
+	- [x] Configure SYSV shared memory limits
 - [ ] Configure disk and file subsystems
 	- [ ] Select proper I/O scheduling algorithm
 	- [ ] Tune file system layout for a given use
