@@ -2,8 +2,8 @@
 	- [ ] Use utilities such as vmstat, iostat, mpstat, sar, gnome-system-monitor, top, powertop, and others to analyze and report system and application behavior
 	- [ ] Use utilities such as Performance Co-Pilot (PCP) to analyze system behavior
 	- [ ] Use utilities such as dmesg, dmidecode, and sosreport to profile system hardware configurations
-- [ ] Monitor and alter kernel behavior
-	- [ ] Use /proc/sys, sysctl, and /sys to examine, modify, and set kernel run-time parameters
+- [x] Monitor and alter kernel behavior
+	- [x] Use /proc/sys, sysctl, and /sys to examine, modify, and set kernel run-time parameters
 	- [x] Configure kernel behavior by altering module parameters
 - [ ] Analyze system and application performance
 	- [ ] Analyze system and application behavior using tools such as ps, top, and Valgrind
@@ -15,18 +15,18 @@
 	- [x] Select and configure tuned profiles
 	- [x] Manage system resource usage using control groups
 	- [x] Configure systemd services with resource constraints
-- [ ] Tune memory utilization
+- [x] Tune memory utilization
 	- [x] Configure systems to support alternate page sizes for applications that use large amounts of memory
 	- [x] Configure memory overcommit behavior
 	- [x] Tune swap algorithm behavior to prioritize retaining anonymous or cached data
 	- [x] Identify NUMA topology and configure NUMA-aware resource placement
 	- [x] Configure SYSV shared memory limits
-- [ ] Configure disk and file subsystems
-	- [ ] Select proper I/O scheduling algorithm
-	- [ ] Tune file system layout for a given use
-	- [ ] Tune dirty page writeback parameters
-- [ ] Tune network performance
-	- [ ] Calculate network buffer sizes based on known quantities such as bandwidth and round-trip time
-	- [ ] Set system buffer sizes based on those calculations
-	- [ ] Configure UDP buffer sizes
+- [x] Configure disk and file subsystems
+	- [x] Select proper I/O scheduling algorithm
+	- [x] Tune file system layout for a given use
+	- [x] Tune dirty page writeback parameters
+- [x] Tune network performance
+	- [x] Calculate network buffer sizes based on known quantities such as bandwidth and round-trip time
+	- [x] Set system buffer sizes based on those calculations
+	- [x] Configure UDP buffer sizes
 

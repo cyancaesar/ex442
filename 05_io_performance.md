@@ -88,7 +88,7 @@ For serious benchmarking or workload simulation, `fio` is generally more useful 
 
 ## I/O Schedulers
 
-I/O schedulers determine how block I/O requests are queued and dispatched to storage devices. Modern Linux systems use the multi-queue block layer, which allows requests to be distributed across multiple hardware or software queues.
+I/O schedulers determine how block I/O requests are queued and dispatched to storage devices. Modern Linux systems use the multi-queue block layer (**blk-mq**), which allows requests to be distributed across multiple hardware or software queues.
 
 Common schedulers include:
 
@@ -438,3 +438,45 @@ systemctl enable tmp.mount
 ```
 
 Be careful of starting it now, it will wipe the `/tmp`.
+
+
+# Experiment
+
+We setup four devices each has a capacity of 10 GB for different filesystem and mount option:
+- `sda` XFS, mounted to `/mnt/xfs`
+- `sdb` Ext4 with data option ordered, mounted to `/mnt/ext4-ordered`
+- `sdc` Ext4 with data option writeback, mounted to `/mnt/ext4-writeback`
+- `sdd` Ext4 with data option journal, mounted to `/mnt/ext4-journal`
+
+## Write Operation
+
+Performing the same write command on all four mounts:
+
+```bash
+dd if=/dev/zero of=/mnt/xfs/test.bin bs=1M count=5120
+dd if=/dev/zero of=/mnt/ext4-ordered/test.bin bs=1M count=5120
+dd if=/dev/zero of=/mnt/ext4-writeback/test.bin bs=1M count=5120
+dd if=/dev/zero of=/mnt/ext4-journal/test.bin bs=1M count=5120
+```
+
+The test result:
+- XFS ~2.0 GB/s
+- Ext4 ordered ~4.2 GB/s
+- Ext4 writeback ~4.2 GB/s
+- Ext4 journal 330 MB/s
+
+## Read Operation
+
+```
+dd if=/mnt/xfs/test.bin of=/dev/null bs=1M iflag=direct
+dd if=/mnt/ext4-ordered/test.bin of=/dev/null bs=1M iflag=direct
+dd if=/mnt/ext4-writeback/test.bin of=/dev/null bs=1M iflag=direct
+dd if=/mnt/ext4-journal/test.bin of=/dev/null bs=1M iflag=direct
+```
+
+The test result:
+- XFS ~2.6 GB/s
+- Ext4 ordered ~5.5 GB/s
+- Ext4 writeback ~5.4 GB/s
+- Ext4 journal 3.1 GB/s
+

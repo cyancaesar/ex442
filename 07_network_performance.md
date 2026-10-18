@@ -57,13 +57,13 @@ It reports that the bandwidth is 632 MB/s.
 A modern alternative to **qperf**, on the server:
 
 ```bash
-iperf -s
+iperf3 -s
 ```
 
 On the client:
 
 ```bash
-iperf -c slownix
+iperf3 -c slownix
 ```
 
 ```result
