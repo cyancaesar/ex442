@@ -4,21 +4,23 @@
     "type": "split",
     "children": [
       {
-        "id": "dda2e4ed9ab18010",
+        "id": "ea34883635506c99",
         "type": "tabs",
         "children": [
           {
-            "id": "b46755953419b97b",
+            "id": "bb248a3605fb2e35",
             "type": "leaf",
+            "pinned": true,
             "state": {
               "type": "markdown",
               "state": {
-                "file": "use_method.md",
-                "mode": "preview",
+                "file": "00_index.md",
+                "mode": "source",
                 "source": false
               },
+              "pinned": true,
               "icon": "lucide-file",
-              "title": "use_method"
+              "title": "00_index"
             }
           }
         ]
@@ -188,27 +190,28 @@
       "bases:Create new base": false
     }
   },
-  "active": "b46755953419b97b",
+  "active": "bb248a3605fb2e35",
   "lastOpenFiles": [
-    "sysv_ipc_shm.md",
-    "use_method.md",
-    "07_network_performance.md",
     "00_index.md",
-    "03_kernel_tuning.md",
-    "04_control_groups.md",
-    "_note_2.md",
-    "05_io_performance.md",
+    "sar.md",
+    "attachments/sar.png",
     "attachments/linux_observability_tools.png",
     "_note_1.md",
-    "tunables/swappiness.md",
+    "_note_2.md",
     "02_linux_performance_monitoring.md",
     "01_linux_performance_fundamentals.md",
+    "use_method.md",
+    "sysv_ipc_shm.md",
+    "07_network_performance.md",
+    "03_kernel_tuning.md",
+    "04_control_groups.md",
+    "05_io_performance.md",
+    "tunables/swappiness.md",
     "06_memory_performance.md",
     "tunables",
     "08_cpu_performance.md",
     "04_Revision.md",
     "attachments/top_cpu_weights.png",
-    "attachments/sar.png",
     "attachments",
     "ddd.sh.md",
     "Welcome.md"
