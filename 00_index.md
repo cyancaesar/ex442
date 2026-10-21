@@ -1,7 +1,7 @@
 - [ ] Use utilities to analyze system behavior
-	- [ ] Use utilities such as vmstat, iostat, mpstat, sar, gnome-system-monitor, top, powertop, and others to analyze and report system and application behavior
+	- [x] Use utilities such as vmstat, iostat, mpstat, sar, gnome-system-monitor, top, powertop, and others to analyze and report system and application behavior
 	- [ ] Use utilities such as Performance Co-Pilot (PCP) to analyze system behavior
-	- [ ] Use utilities such as dmesg, dmidecode, and sosreport to profile system hardware configurations
+	- [x] Use utilities such as dmesg, dmidecode, and sosreport to profile system hardware configurations
 - [x] Monitor and alter kernel behavior
 	- [x] Use /proc/sys, sysctl, and /sys to examine, modify, and set kernel run-time parameters
 	- [x] Configure kernel behavior by altering module parameters

@@ -4,23 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "ea34883635506c99",
+        "id": "31999e88a034ff4b",
         "type": "tabs",
         "children": [
           {
-            "id": "bb248a3605fb2e35",
+            "id": "77e5672a20dd2032",
             "type": "leaf",
-            "pinned": true,
             "state": {
               "type": "markdown",
               "state": {
-                "file": "00_index.md",
+                "file": "pcp.md",
                 "mode": "source",
                 "source": false
               },
-              "pinned": true,
               "icon": "lucide-file",
-              "title": "00_index"
+              "title": "pcp"
             }
           }
         ]
@@ -101,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "00_index.md",
+                "file": "pcp.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -190,18 +188,20 @@
       "bases:Create new base": false
     }
   },
-  "active": "bb248a3605fb2e35",
+  "active": "77e5672a20dd2032",
   "lastOpenFiles": [
-    "00_index.md",
+    "sysv_ipc_shm.md",
+    "pcp.md",
     "sar.md",
+    "use_method.md",
+    "attachments/pcp.png",
+    "00_index.md",
     "attachments/sar.png",
     "attachments/linux_observability_tools.png",
     "_note_1.md",
     "_note_2.md",
     "02_linux_performance_monitoring.md",
     "01_linux_performance_fundamentals.md",
-    "use_method.md",
-    "sysv_ipc_shm.md",
     "07_network_performance.md",
     "03_kernel_tuning.md",
     "04_control_groups.md",

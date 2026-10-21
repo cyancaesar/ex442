@@ -3,5 +3,6 @@
   "showUnsupportedFiles": true,
   "readableLineLength": true,
   "tabSize": 4,
-  "settingsPopoutWindow": false
+  "settingsPopoutWindow": false,
+  "alwaysUpdateLinks": true
 }
