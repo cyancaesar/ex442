@@ -1,13 +1,13 @@
-- [ ] Use utilities to analyze system behavior
+- [x] Use utilities to analyze system behavior
 	- [x] Use utilities such as vmstat, iostat, mpstat, sar, gnome-system-monitor, top, powertop, and others to analyze and report system and application behavior
-	- [ ] Use utilities such as Performance Co-Pilot (PCP) to analyze system behavior
+	- [x] Use utilities such as Performance Co-Pilot (PCP) to analyze system behavior
 	- [x] Use utilities such as dmesg, dmidecode, and sosreport to profile system hardware configurations
 - [x] Monitor and alter kernel behavior
 	- [x] Use /proc/sys, sysctl, and /sys to examine, modify, and set kernel run-time parameters
 	- [x] Configure kernel behavior by altering module parameters
 - [ ] Analyze system and application performance
-	- [ ] Analyze system and application behavior using tools such as ps, top, and Valgrind
-	- [ ] Configure systems to run SystemTap scripts
+	- [x] Analyze system and application behavior using tools such as ps, top, and Valgrind
+	- [x] Configure systems to run SystemTap scripts
 	- [ ] Use the eBPF family of tools (e.g. syscount, gethostlatency and others)  to diagnose system and application behavior
 	- [ ] Given multiple versions of applications that perform the same or similar tasks, choose which version of the application to run on a system based on its observed performance characteristics
 - [x] Tune running systems
