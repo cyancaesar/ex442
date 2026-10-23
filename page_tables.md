@@ -21,9 +21,11 @@ Applications work with virtual memory addresses, while physical RAM uses physica
 
 **TLB** (Translation Lookaside Buffer) caches the recent translation of the page table to a fast cache inside the CPU, instead of walking the page tables each time.
 
-When a CPU requests a memory address, the CPU looks on its cache, if the address is cached, it returns it, if not (TLB miss). Otherwise it will walk the whole page table in memory.
+When a CPU requests a memory address, the CPU looks on its cache, if the address is cached, it returns it, if not (**TLB miss**). Otherwise it will walk the whole page table in memory.
 
-The **TLB** has a limited capacity, it can't cache every translation for a large application. This is where **HugePages** become useful. which primarily reduce the number of translations. 
+The **TLB** has a limited capacity, it can't cache every translation for a large application. This is where **HugePages** become useful. which primarily reduce the number of translations.
+
+**TLB flush** is a cached translations that are invalidated.
 
 # HugePages
 
@@ -237,5 +239,71 @@ If we don't have enough HugePage, the program will fail and says:
 
 ```
 mmap: Cannot allocate memory
+```
+
+# HugePages Interface
+
+In Linux, there are four application-facing ways to access HugeTLB pages:
+1. System V shared memory: `shmget(SHM_HUGETLB)`
+2. hugetlbfs: `mmap()` on hugetlbfs file
+3. Direct anonymous mapping: `mmap(MAP_HUGETLB)`
+4. HugeTLB memory file descriptor
+
+All these methods use HugeTLB subsystem, which manages the HugePages pools configured by the administrator.
+
+
+## System V shm
+
+System V shared memory explain in [[sysv_ipc_shm]].
+
+The most important system calls are:
+- `shmget()`: Create or locate a shared memory segment
+- `shmat()`: Attach a shared memory segment to a process
+
+Ordinary System V shared memory does not automatically imply HugePages. An application can specifically request HugeTLB-backed shared memory using the `SHM_HUGETLB` flag.
+
+Conceptually:
+
+```c
+shmget(
+	IPC_PRIVATE,
+	64 * 1024 * 1024,
+	IPC_CREAT | 0600 | SHM_HUGETLB
+)
+```
+
+This requests 64 MiB shared memory segment backed by HugeTLB pages.
+
+## HugeTLB filesystem `hugetlbfs`
+
+It is a special pseudo-filesystem that lets application use HugeTLB-backed memory through file mappings. It acts as a filesystem interface to the HugeTLB memory management system.
+
+Administrator can create a HugeTLB filesystem:
+
+```bash
+mkdir -p /hugetlb
+mount -t hugetlbfs none /hugetlb
+```
+
+Then check its mounting point:
+
+```bash
+findmnt -t hugetlbfs
+```
+
+```result
+/hugetlb       none      hugetlbfs rw,relatime,seclabel,pagesize=2M
+```
+
+Then an application can then open or create (`mmap`) a file such as:
+
+```bash
+/hugetlb/memory
+```
+
+Mount it persistently in `/etc/fstab`
+
+```bash
+none	/hugetlb	hugetlbfs	pagesize=2M 0 0
 ```
 
