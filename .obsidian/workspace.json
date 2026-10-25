@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "8877833ba8348f12",
+        "id": "b4db02d81b7cfdbc",
         "type": "tabs",
         "children": [
           {
-            "id": "ecd68a6786727f58",
+            "id": "8ffafd78186f6dd8",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "page_tables.md",
-                "mode": "preview",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "page_tables"
+              "title": "New tab"
             }
           }
         ]
@@ -99,7 +95,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "page_tables.md",
+                "file": "00_index.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -188,27 +184,27 @@
       "bases:Create new base": false
     }
   },
-  "active": "ecd68a6786727f58",
+  "active": "c768b671370761d8",
   "lastOpenFiles": [
     "sysv_ipc_shm.md",
+    "00_index.md",
+    "01_linux_performance_fundamentals.md",
+    "sar.md",
+    "pcp.md",
+    "_note_2.md",
+    "_note_1.md",
+    "use_method.md",
     "page_tables.md",
+    "05_io_performance.md",
+    "04_control_groups.md",
     "08_cpu_performance.md",
     "03_kernel_tuning.md",
-    "00_index.md",
-    "_note_2.md",
-    "use_method.md",
-    "04_control_groups.md",
     "attachments/memory_pages.png",
-    "pcp.md",
-    "sar.md",
     "02_linux_performance_monitoring.md",
-    "_note_1.md",
     "attachments/pcp.png",
     "attachments/sar.png",
     "attachments/linux_observability_tools.png",
-    "01_linux_performance_fundamentals.md",
     "07_network_performance.md",
-    "05_io_performance.md",
     "tunables/swappiness.md",
     "06_memory_performance.md",
     "tunables",

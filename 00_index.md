@@ -5,11 +5,11 @@
 - [x] Monitor and alter kernel behavior
 	- [x] Use /proc/sys, sysctl, and /sys to examine, modify, and set kernel run-time parameters
 	- [x] Configure kernel behavior by altering module parameters
-- [ ] Analyze system and application performance
+- [x] Analyze system and application performance
 	- [x] Analyze system and application behavior using tools such as ps, top, and Valgrind
 	- [x] Configure systems to run SystemTap scripts
-	- [ ] Use the eBPF family of tools (e.g. syscount, gethostlatency and others)  to diagnose system and application behavior
-	- [ ] Given multiple versions of applications that perform the same or similar tasks, choose which version of the application to run on a system based on its observed performance characteristics
+	- [x] Use the eBPF family of tools (e.g. syscount, gethostlatency and others) to diagnose system and application behavior
+	- [x] Given multiple versions of applications that perform the same or similar tasks, choose which version of the application to run on a system based on its observed performance characteristics
 - [x] Tune running systems
 	- [x] Alter process priorities of both new and existing processes
 	- [x] Select and configure tuned profiles
